@@ -1,0 +1,8 @@
+/catalog
+/vendor
+/.idea
+/.vagrant
+.env
+*.DS_Store
+/package-lock.json
+
