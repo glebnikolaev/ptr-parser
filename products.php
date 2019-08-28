@@ -250,7 +250,7 @@ class Products
         $res = false;
         $products = [];
         $productModel = $productInfo['url'];
-        $productName = $productInfo['name'];
+        $productName = htmlentities($productInfo['name']);
         $sql = "SELECT * FROM oc_product LEFT JOIN oc_product_description USING(product_id) 
                 WHERE oc_product.model = '$productModel' AND oc_product_description.name = '$productName'";
         $result = $this->mysql->query($sql);
@@ -298,11 +298,11 @@ class Products
         $product_id =  $this->mysql->insert_id;
         echo "<br>";
         echo $this->mysql->error;
-        $name = $productData['name'];
-        $meta_title = $productData['name'];
+        $name = htmlentities($productData['name']);
+        $meta_title = htmlentities($productData['name']);
         $donor_link = $productData['donor_link'];
         $price_unit = $productData['price_unit'];
-        $description = $productData['description'].$productData['tech_info'].$productData['details'];
+        $description = htmlentities($productData['description'].$productData['tech_info'].$productData['details']);
 
         $sql2 = "INSERT INTO oc_product_description (`product_id`, `name`, `meta_title`, `donor_link`, `price_unit`, `description`) 
                  VALUES ('$product_id', '$name', '$meta_title', '$donor_link', '$price_unit', '$description')";
