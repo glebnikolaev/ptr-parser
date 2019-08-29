@@ -4,6 +4,7 @@ require 'vendor/autoload.php';
 define('IMAGES_DIR', $_SERVER['DOCUMENT_ROOT'] . '/catalog');
 
 set_time_limit(0);
+
 $products = new Products();
 $products->fixImages();
 
@@ -250,7 +251,7 @@ class Products
         $res = false;
         $products = [];
         $productModel = $productInfo['url'];
-        $productName = htmlentities($productInfo['name']);
+        $productName = htmlentities(addslashes($productInfo['name']));
         $sql = "SELECT * FROM oc_product LEFT JOIN oc_product_description USING(product_id) 
                 WHERE oc_product.model = '$productModel' AND oc_product_description.name = '$productName'";
         $result = $this->mysql->query($sql);
@@ -298,8 +299,8 @@ class Products
         $product_id =  $this->mysql->insert_id;
         echo "<br>";
         echo $this->mysql->error;
-        $name = htmlentities($productData['name']);
-        $meta_title = htmlentities($productData['name']);
+        $name = htmlentities(addslashes($productData['name']));
+        $meta_title = $name;
         $donor_link = $productData['donor_link'];
         $price_unit = $productData['price_unit'];
         $description = htmlentities($productData['description'].$productData['tech_info'].$productData['details']);
@@ -363,9 +364,8 @@ class Products
                              WHERE `product_id` = '$product_id'");
         echo $this->mysql->error;
 
-        $this->mysql->query("UPDATE oc_product_to_category
-                             SET `category_id` = '$category_id'
-                             WHERE `product_id` = '$product_id'");
+        $this->mysql->query("INSERT INTO oc_product_to_category (`category_id`, `product_id`) 
+                             VALUES ('$category_id', '$product_id')");
         echo $this->mysql->error;
     }
 }
