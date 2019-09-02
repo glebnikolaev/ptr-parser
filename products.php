@@ -305,8 +305,8 @@ class Products
         $price_unit = $productData['price_unit'];
         $description = htmlentities($productData['description'].$productData['tech_info'].$productData['details']);
 
-        $sql2 = "INSERT INTO oc_product_description (`product_id`, `name`, `meta_title`, `donor_link`, `price_unit`, `description`) 
-                 VALUES ('$product_id', '$name', '$meta_title', '$donor_link', '$price_unit', '$description')";
+        $sql2 = "INSERT INTO oc_product_description (`product_id`, `name`, `meta_title`, `meta_h1`, `donor_link`, `price_unit`, `description`) 
+                 VALUES ('$product_id', '$name', '$meta_title', '', '$donor_link', '$price_unit', '$description')";
         $this->mysql->query($sql2);
         echo $this->mysql->error;
 

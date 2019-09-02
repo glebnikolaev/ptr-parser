@@ -163,7 +163,7 @@ class Categories
             }
         }
 
-        $top = 0;
+        $top = $parent_id > 0 ? 0 : 1;
         $column = 1;
         $sort_order = 0;
         $status = 1;
@@ -172,23 +172,27 @@ class Categories
         $sql = "INSERT INTO oc_category (`image`, `parent_id`, `top`, `column`, `sort_order`, `status`, `date_added`, `date_modified`) 
                   VALUES ('$image','$parent_id','$top','$column','$sort_order','$status','$date_added','$date_modified')";
         $this->mysql->query($sql);
+        echo $this->mysql->error . '<br>';
 
         $category_id = $this->mysql->insert_id;
         $language_id = '1';
         $name = trim($category['name']);
         $meta_title = $category['name'];
         $donor_link = $category['url'];
-        $sql2 = "INSERT INTO oc_category_description (`category_id`, `language_id`, `name`, `description`, `meta_title`, `meta_description`, `meta_keyword`, `donor_link`) 
-                    VALUES ('$category_id', '$language_id', '$name', '', '$meta_title', '', '', '$donor_link')";
+        $sql2 = "INSERT INTO oc_category_description (`category_id`, `language_id`, `name`, `description`, `meta_title`, `meta_h1`, `meta_description`, `meta_keyword`, `donor_link`) 
+                    VALUES ('$category_id', '$language_id', '$name', '', '$meta_title', '', '', '', '$donor_link')";
         $result = $this->mysql->query($sql2);
+        echo $this->mysql->error . '<br>';
 
         $sql3 = "INSERT INTO oc_category_to_layout (`category_id`, `store_id`, `layout_id`) 
                     VALUES ('$category_id', '0', '0')";
         $this->mysql->query($sql3);
+        echo $this->mysql->error . '<br>';
 
         $sql4 = "INSERT INTO oc_category_to_store (`category_id`, `store_id`) 
                     VALUES ('$category_id', '0')";
         $this->mysql->query($sql4);
+        echo $this->mysql->error . '<br>';
 
         return $category_id;
     }
