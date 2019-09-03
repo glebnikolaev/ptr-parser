@@ -271,12 +271,12 @@ class Products
 
     public function storeProduct(array $productData)
     {
-        $image = null;
+        $imageMain = null;
         if (isset($productData['image'])) {
             preg_match('/\/([0-9]+)\//', $productData['image'], $catalogId);
             if (!empty($catalogId)) {
                 $imageName = 'product-' . $catalogId[1] . '.jpg';
-                $image = "catalog/$imageName";
+                $imageMain = "catalog/$imageName";
                 file_put_contents(IMAGES_DIR . '/' . $imageName, file_get_contents($productData['image']));
             }
         }
@@ -292,11 +292,11 @@ class Products
         $height = !empty($productData['size']['height']) ? $productData['size']['height'] : 0;
 
         $sql = "INSERT INTO oc_product (`model`, `image`, `price`, `weight`, `length`, `width`, `height`, `date_available`, `date_added`, `date_modified`) 
-                VALUES ('$model', '$image', '$price', '$weight', '$length', '$width', '$height', '$date_available', '$date_added', '$date_modified')";
+                VALUES ('$model', '$imageMain', '$price', '$weight', '$length', '$width', '$height', '$date_available', '$date_added', '$date_modified')";
         $this->mysql->query($sql);
         echo $this->mysql->error;
 
-        $product_id =  $this->mysql->insert_id;
+        $product_id = $this->mysql->insert_id;
         echo "<br>";
         echo $this->mysql->error;
         $name = htmlentities(addslashes($productData['name']));
@@ -317,14 +317,19 @@ class Products
                     preg_match('/\/([0-9]+)\//', $image, $catalogId);
                     if (!empty($catalogId)) {
                         $imageName = 'product-' . $catalogId[1] . "-$key.jpg";
-                        $image = "catalog/$imageName";
-                        file_put_contents(IMAGES_DIR . '/' . $imageName, file_get_contents($image));
+                        $img = "catalog/$imageName";
+                        file_put_contents(IMAGES_DIR . '/' . $imageName, file_get_contents('https:' . $image));
+                        if (empty($imageMain)) {
+                            $this->mysql->query("UPDATE oc_product
+                                                 SET `image` = '$img'
+                                                 WHERE `product_id` = '$product_id'");
+                        }
+                        $sql3 = "INSERT INTO oc_product_image (`product_id`, `image`) 
+                                 VALUES ('$product_id', '$img')";
+                        $this->mysql->query($sql3);
+                        echo $this->mysql->error;
                     }
                 }
-                $sql3 = "INSERT INTO oc_product_image (`product_id`, `image`) 
-                    VALUES ('$product_id', '$i')";
-                $this->mysql->query($sql3);
-                echo $this->mysql->error;
             }
         }
 
