@@ -2,48 +2,98 @@
 require 'vendor/autoload.php';
 
 define('IMAGES_DIR', $_SERVER['DOCUMENT_ROOT'] . '/catalog');
+define('PRODUCTS_LOG_FILE', $_SERVER['DOCUMENT_ROOT'] . '/products.log');
 
 set_time_limit(0);
+file_put_contents(PRODUCTS_LOG_FILE, '');
+
+if (!is_dir(IMAGES_DIR)) {
+	if (!mkdir(IMAGES_DIR)) {
+		die('Не удается создать директорию для сохранения изображений. Проверьте права проекта.');
+	}
+}
 
 $products = new Products();
 $products->fixImages();
 
-$productId = [];
-$categories = $products->getNoRootCategories();
-
-if (!is_dir(IMAGES_DIR)) {
-    if (!mkdir(IMAGES_DIR)) {
-        die('Не удается создать директорию для сохранения изображений. Проверьте права проекта.');
+if (!empty($categoryId = $_GET['categoryId'])) {
+	$category = $products->getCategoryById($categoryId);
+	for ($page = 0; $page < 6; $page++) {
+		$productOnPage = $products->getPage($category['donor_link'], $page);
+		if (count($productOnPage) == 0) {
+			$logMessage = "По адресу ".$category['donor_link']." и странице ". $page ." нет ни одного продукта";
+			echo $logMessage . '<br>';
+			file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
+			exit;
+		}
+		$logMessage = "По адресу ".$category['donor_link']." и странице ". $page ." нашли ". count($productOnPage) ." продуктов";
+		echo $logMessage . '<br>';
+		file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
+		echo '<pre>';
+		foreach ($productOnPage as $product) {
+			$productData = $products->getProduct($product['url']);
+			$productData['category_id'] = $category['category_id'];
+			$productData['donor_link'] = $product['url'];
+			$isProductExist = $products->isProductExist($product);
+			if ($isProductExist) {
+				$logMessage = "Такой продукт есть";
+				echo $logMessage . '<br>';
+				file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
+				$products->updateProduct($isProductExist, $productData);
+				$logMessage = "Смотрим инфу по  " . $product['url'] . " нашли " . count($productData) . " данных";
+				echo $logMessage . '<br>';
+				file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
+			} else {
+				$logMessage = "Такого продукта еще нет";
+				echo $logMessage . '<br>';
+				file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
+				$products->storeProduct($productData);
+			}
+		}
+	}
+} else {
+	$productId = [];
+	$categories = $products->getNoRootCategories();
+	
+	foreach ($categories as $category) {
+		echo "Взяли категорию ".$category['category_id']."<br>";
+		for ($page = 0; $page < 6; $page++) {
+			$productOnPage = $products->getPage($category['donor_link'], $page);
+			if (count($productOnPage) == 0) {
+				$logMessage = "По адресу ".$category['donor_link']." и странице ". $page ." нет ни одного продукта";
+				echo $logMessage . '<br>';
+				file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
+				break;
+			}
+			$logMessage = "По адресу ".$category['donor_link']." и странице ". $page ." нашли ". count($productOnPage) ." продуктов";
+			echo $logMessage . '<br>';
+			file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
+			echo '<pre>';
+			foreach ($productOnPage as $product) {
+				$productData = $products->getProduct($product['url']);
+				$productData['category_id'] = $category['category_id'];
+				$productData['donor_link'] = $product['url'];
+				$isProductExist = $products->isProductExist($product);
+				if ($isProductExist) {
+					$logMessage = "Такой продукт есть";
+					echo $logMessage . '<br>';
+					file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
+					$products->updateProduct($isProductExist, $productData);
+					$productId[] = $productData;
+                    $logMessage = "Смотрим инфу по  " . $product['url'] . " нашли " . count($productData) . " данных<br>";
+					echo $logMessage . '<br>';
+					file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
+				} else {
+					$logMessage = "Такого продукта еще нет";
+					echo $logMessage . '<br>';
+					file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
+					$productId[] = $products->storeProduct($productData);
+					$productId[] = $productData;
+				}
+			}
+		}
     }
-}
-
-foreach ($categories as $category) {
-    echo "Взяли категорию ".$category['category_id']."<br>";
-    for ($page = 0; $page < 6; $page++) {
-        $productOnPage = $products->getPage($category['donor_link'], $page);
-        if (count($productOnPage) == 0) {
-            echo "По адресу ".$category['donor_link']." и странице ". $page ." нет ни одного продукта<br>";
-            break;
-        }
-        echo "По адресу ".$category['donor_link']." и странице ". $page ." нашли ". count($productOnPage) ." продуктов<br>";
-        echo '<pre>';
-        foreach ($productOnPage as $product) {
-            $productData = $products->getProduct($product['url']);
-            $productData['category_id'] = $category['category_id'];
-            $productData['donor_link'] = $product['url'];
-            $isProductExist = $products->isProductExist($product);
-            if ($isProductExist) {
-                echo "Такой продукт есть<br>";
-                $products->updateProduct($isProductExist, $productData);
-                $productId[] = $productData;
-                echo "Смотрим инфу по  " . $product['url'] . " нашли " . count($productData) . " данных<br>";
-            } else {
-                echo "Такого продукта еще нет<br>";
-                $productId[] = $products->storeProduct($productData);
-                $productId[] = $productData;
-            }
-        }
-    }
+    file_put_contents(PRODUCTS_LOG_FILE, 'Нормально завершение работы', FILE_APPEND);
 }
 
 use GuzzleHttp\Client;
@@ -56,7 +106,7 @@ class Products
 
     function __construct()
     {
-        $this->mysql = new mysqli('localhost', 'root', 'Devex123!', 'petrovich') or die(fakapsbazoy);
+        $this->mysql = new mysqli('localhost', 'root', 'Devex123!', 'stroy-test') or die(fakapsbazoy);
         $this->mysql->query("SET NAMES utf8");
 
         $this->options = ['base_uri' => 'https://petrovich.ru/'];
@@ -227,7 +277,14 @@ class Products
             $this->mysql->query($sql);
         }
 
-    }
+	}
+	
+	public function getCategoryById(int $categoryId) {
+		$result = $this->mysql->query("SELECT * FROM oc_category_description
+									   WHERE `category_id` = '$categoryId'");
+		$result = $result->fetch_assoc();
+		return $result;
+	}
 
     public function getNoRootCategories()
     {
@@ -294,11 +351,15 @@ class Products
         $sql = "INSERT INTO oc_product (`model`, `image`, `price`, `weight`, `length`, `width`, `height`, `date_available`, `date_added`, `date_modified`) 
                 VALUES ('$model', '$imageMain', '$price', '$weight', '$length', '$width', '$height', '$date_available', '$date_added', '$date_modified')";
         $this->mysql->query($sql);
-        echo $this->mysql->error;
+        $logMessage = $this->mysql->error;
+        echo $logMessage . '<br>';
+        file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
 
         $product_id = $this->mysql->insert_id;
         echo "<br>";
-        echo $this->mysql->error;
+        $logMessage = $this->mysql->error;
+        echo $logMessage . '<br>';
+        file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
         $name = htmlentities(addslashes($productData['name']));
         $meta_title = $name;
         $donor_link = $productData['donor_link'];
@@ -308,7 +369,9 @@ class Products
         $sql2 = "INSERT INTO oc_product_description (`product_id`, `name`, `meta_title`, `meta_h1`, `donor_link`, `price_unit`, `description`) 
                  VALUES ('$product_id', '$name', '$meta_title', '', '$donor_link', '$price_unit', '$description')";
         $this->mysql->query($sql2);
-        echo $this->mysql->error;
+        $logMessage = $this->mysql->error;
+        echo $logMessage . '<br>';
+        file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
 
         if (isset($productData['images']) && count($productData['images']) > 0) {
             foreach ($productData['images'] as $key => $image) {
@@ -338,17 +401,23 @@ class Products
         $sql4 = "INSERT INTO oc_product_to_category (`category_id`, `product_id`) 
                     VALUES ('$category_id', '$product_id')";
         $this->mysql->query($sql4);
-        echo $this->mysql->error;
+        $logMessage = $this->mysql->error;
+        echo $logMessage . '<br>';
+        file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
 
         $sql5 = "INSERT INTO oc_product_to_store (`product_id`, `store_id`) 
                     VALUES ('$product_id', '0')";
         $this->mysql->query($sql5);
-        echo $this->mysql->error;
+        $logMessage = $this->mysql->error;
+        echo $logMessage . '<br>';
+        file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
 
         $sql6 = "INSERT INTO oc_product_to_layout (`product_id`, `layout_id`, `store_id`) 
                     VALUES ('$product_id', '0', '0')";
         $this->mysql->query($sql6);
-        echo $this->mysql->error;
+        $logMessage = $this->mysql->error;
+        echo $logMessage . '<br>';
+        file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
 
         return $product_id;
     }
@@ -367,10 +436,14 @@ class Products
                              SET `price` = '$price',
                                  `date_modified` = '$date_modified'
                              WHERE `product_id` = '$product_id'");
-        echo $this->mysql->error;
+        $logMessage = $this->mysql->error;
+        echo $logMessage . '<br>';
+        file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
 
         $this->mysql->query("INSERT INTO oc_product_to_category (`category_id`, `product_id`) 
                              VALUES ('$category_id', '$product_id')");
-        echo $this->mysql->error;
+        $logMessage = $this->mysql->error;
+        echo $logMessage . '<br>';
+        file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
     }
 }
