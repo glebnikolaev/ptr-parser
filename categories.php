@@ -4,13 +4,18 @@ $dotenv = Dotenv\Dotenv::create(__DIR__);
 $dotenv->load();
 
 define('IMAGES_DIR', $_SERVER['DOCUMENT_ROOT'] . '/catalog');
+define('CATEGORIES_LOG_FILE', $_SERVER['DOCUMENT_ROOT'] . '/categories.log');
+
+file_put_contents(CATEGORIES_LOG_FILE, '');
 
 $categories = new Categories();
 $tree = $categories->getCategoryTree();
 
 if (!is_dir(IMAGES_DIR)) {
     if (!mkdir(IMAGES_DIR)) {
-        die('Не удается создать директорию для сохранения изображений. Проверьте права проекта.');
+        $logMessage = 'Не удается создать директорию для сохранения изображений. Проверьте права проекта.';
+        file_put_contents(CATEGORIES_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
+		die($logMessage);
     }
 }
 
@@ -174,7 +179,9 @@ class Categories
         $sql = "INSERT INTO oc_category (`image`, `parent_id`, `top`, `column`, `sort_order`, `status`, `date_added`, `date_modified`) 
                   VALUES ('$image','$parent_id','$top','$column','$sort_order','$status','$date_added','$date_modified')";
         $this->mysql->query($sql);
-        echo $this->mysql->error . '<br>';
+        $logMessage = $this->mysql->error;
+        echo $logMessage . '<br>';
+        file_put_contents(CATEGORIES_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
 
         $category_id = $this->mysql->insert_id;
         $language_id = '1';
@@ -184,17 +191,23 @@ class Categories
         $sql2 = "INSERT INTO oc_category_description (`category_id`, `language_id`, `name`, `description`, `meta_title`, `meta_h1`, `meta_description`, `meta_keyword`, `donor_link`) 
                     VALUES ('$category_id', '$language_id', '$name', '', '$meta_title', '', '', '', '$donor_link')";
         $result = $this->mysql->query($sql2);
-        echo $this->mysql->error . '<br>';
+        $logMessage = $this->mysql->error;
+        echo $logMessage . '<br>';
+        file_put_contents(CATEGORIES_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
 
         $sql3 = "INSERT INTO oc_category_to_layout (`category_id`, `store_id`, `layout_id`) 
                     VALUES ('$category_id', '0', '0')";
         $this->mysql->query($sql3);
-        echo $this->mysql->error . '<br>';
+        $logMessage = $this->mysql->error;
+        echo $logMessage . '<br>';
+        file_put_contents(CATEGORIES_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
 
         $sql4 = "INSERT INTO oc_category_to_store (`category_id`, `store_id`) 
                     VALUES ('$category_id', '0')";
         $this->mysql->query($sql4);
-        echo $this->mysql->error . '<br>';
+        $logMessage = $this->mysql->error;
+        echo $logMessage . '<br>';
+        file_put_contents(CATEGORIES_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
 
         return $category_id;
     }
@@ -212,6 +225,9 @@ class Categories
         $result = $this->mysql->query("SELECT category_id 
                                        FROM oc_category_description
                                        WHERE `name` LIKE '$catName'");
+        $logMessage = $this->mysql->error;
+        echo $logMessage . '<br>';
+        file_put_contents(CATEGORIES_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
         $resultAssoc = $result->fetch_assoc();
         return !empty($resultAssoc) ? (int) $resultAssoc['category_id'] : null;
     }
@@ -228,6 +244,8 @@ class Categories
                              SET `date_modified` = '$date_modified', 
                                  `status` = 1
                              WHERE `category_id` = '$category_id'");
-        echo $this->mysql->error . '<br>';
+        $logMessage = $this->mysql->error;
+        echo $logMessage . '<br>';
+        file_put_contents(CATEGORIES_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
     }
 }

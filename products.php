@@ -22,13 +22,17 @@ $products->fixImages();
 
 if (!empty($categoryId = $_GET['categoryId'])) {
 	$category = $products->getCategoryById($categoryId);
-	for ($page = 0; $page < 6; $page++) {
-		$productOnPage = $products->getPage($category['donor_link'], $page);
+	for ($page = 0; $page < 50; $page++) {
+        $logMessage = "Получаем $page-ю страницу...";
+        echo $logMessage . '<br>';
+        file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
+        $productOnPage = $products->getPage($category['donor_link'], $page);
 		if (count($productOnPage) == 0) {
 			$logMessage = "По адресу ".$category['donor_link']." и странице ". $page ." нет ни одного продукта";
 			echo $logMessage . '<br>';
 			file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
-			exit;
+            file_put_contents(PRODUCTS_LOG_FILE, 'Нормальное завершение работы' . PHP_EOL, FILE_APPEND);
+            exit;
 		}
 		$logMessage = "По адресу ".$category['donor_link']." и странице ". $page ." нашли ". count($productOnPage) ." продуктов";
 		echo $logMessage . '<br>';
@@ -54,7 +58,8 @@ if (!empty($categoryId = $_GET['categoryId'])) {
 				$products->storeProduct($productData);
 			}
 		}
-	}
+    }
+    file_put_contents(PRODUCTS_LOG_FILE, 'Нормальное завершение работы', FILE_APPEND);
 } else {
 	$productId = [];
 	$categories = $products->getNoRootCategories();
@@ -63,12 +68,16 @@ if (!empty($categoryId = $_GET['categoryId'])) {
         $logMessage = "Взяли категорию ".$category['category_id'];
         echo $logMessage . '<br>';
         file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
-		for ($page = 0; $page < 6; $page++) {
+		for ($page = 0; $page < 50; $page++) {
+            $logMessage = "Получаем $page-ю страницу...";
+            echo $logMessage . '<br>';
+            file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
 			$productOnPage = $products->getPage($category['donor_link'], $page);
 			if (count($productOnPage) == 0) {
 				$logMessage = "По адресу ".$category['donor_link']." и странице ". $page ." нет ни одного продукта";
 				echo $logMessage . '<br>';
-				file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
+                file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
+                file_put_contents(PRODUCTS_LOG_FILE, 'Переходим к следующей категории' . PHP_EOL, FILE_APPEND);
 				break;
 			}
 			$logMessage = "По адресу ".$category['donor_link']." и странице ". $page ." нашли ". count($productOnPage) ." продуктов";
@@ -103,6 +112,8 @@ if (!empty($categoryId = $_GET['categoryId'])) {
 }
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Psr7;
+use GuzzleHttp\Exception\RequestException;
 
 class Products
 {
@@ -131,8 +142,19 @@ class Products
         if($page > 0) {
             $allow_redirects = false;
         }
-        $response = $this->client->request('GET', $catUrl.'?p='.$page, ['allow_redirects' => $allow_redirects]);
-        if ($response->getStatusCode() == 200) {
+        try {
+            $response = $this->client->request('GET', $catUrl.'?p='.$page, ['allow_redirects' => $allow_redirects]);
+        } catch (RequestException $e) {
+            echo Psr7\str($e->getRequest());
+            if ($e->hasResponse()) {
+              echo Psr7\str($e->getResponse());
+            }
+        }
+        $responseStatus = $response->getStatusCode();
+        $logMessage = "Ответ: $responseStatus";
+        echo $logMessage . '<br>';
+        file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
+        if ($responseStatus == 200) {
             $feed = $response->getBody();
             preg_match_all($pattern, $feed, $matches, PREG_SET_ORDER);
             foreach ($matches as $match) {
