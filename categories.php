@@ -1,5 +1,7 @@
 <?php
 require 'vendor/autoload.php';
+$dotenv = Dotenv\Dotenv::create(__DIR__);
+$dotenv->load();
 
 define('IMAGES_DIR', $_SERVER['DOCUMENT_ROOT'] . '/catalog');
 
@@ -50,7 +52,7 @@ class Categories
 
     function __construct()
     {
-        $this->mysql = new mysqli('localhost', 'root', 'Devex123!', 'petrovich') or die(fakapsbazoy);
+        $this->mysql = new mysqli(getenv('DB_HOST'), getenv('DB_USERNAME'), getenv('DB_PASSWORD'), getenv('DB_NAME')) or die(fakapsbazoy);
         $this->mysql->query("SET NAMES utf8");
 
         $this->prepare();

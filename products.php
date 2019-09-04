@@ -1,5 +1,7 @@
 <?php
 require 'vendor/autoload.php';
+$dotenv = Dotenv\Dotenv::create(__DIR__);
+$dotenv->load();
 
 define('IMAGES_DIR', $_SERVER['DOCUMENT_ROOT'] . '/catalog');
 define('PRODUCTS_LOG_FILE', $_SERVER['DOCUMENT_ROOT'] . '/products.log');
@@ -9,7 +11,9 @@ file_put_contents(PRODUCTS_LOG_FILE, '');
 
 if (!is_dir(IMAGES_DIR)) {
 	if (!mkdir(IMAGES_DIR)) {
-		die('Не удается создать директорию для сохранения изображений. Проверьте права проекта.');
+        $logMessage = 'Не удается создать директорию для сохранения изображений. Проверьте права проекта.';
+        file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
+		die($logMessage);
 	}
 }
 
@@ -56,7 +60,9 @@ if (!empty($categoryId = $_GET['categoryId'])) {
 	$categories = $products->getNoRootCategories();
 	
 	foreach ($categories as $category) {
-		echo "Взяли категорию ".$category['category_id']."<br>";
+        $logMessage = "Взяли категорию ".$category['category_id'];
+        echo $logMessage . '<br>';
+        file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
 		for ($page = 0; $page < 6; $page++) {
 			$productOnPage = $products->getPage($category['donor_link'], $page);
 			if (count($productOnPage) == 0) {
@@ -80,7 +86,7 @@ if (!empty($categoryId = $_GET['categoryId'])) {
 					file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
 					$products->updateProduct($isProductExist, $productData);
 					$productId[] = $productData;
-                    $logMessage = "Смотрим инфу по  " . $product['url'] . " нашли " . count($productData) . " данных<br>";
+                    $logMessage = "Смотрим инфу по  " . $product['url'] . " нашли " . count($productData) . " данных";
 					echo $logMessage . '<br>';
 					file_put_contents(PRODUCTS_LOG_FILE, $logMessage . PHP_EOL, FILE_APPEND);
 				} else {
@@ -93,7 +99,7 @@ if (!empty($categoryId = $_GET['categoryId'])) {
 			}
 		}
     }
-    file_put_contents(PRODUCTS_LOG_FILE, 'Нормально завершение работы', FILE_APPEND);
+    file_put_contents(PRODUCTS_LOG_FILE, 'Нормальное завершение работы', FILE_APPEND);
 }
 
 use GuzzleHttp\Client;
@@ -106,7 +112,7 @@ class Products
 
     function __construct()
     {
-        $this->mysql = new mysqli('localhost', 'root', 'Devex123!', 'stroy-test') or die(fakapsbazoy);
+        $this->mysql = new mysqli(getenv('DB_HOST'), getenv('DB_USERNAME'), getenv('DB_PASSWORD'), getenv('DB_NAME')) or die(fakapsbazoy);
         $this->mysql->query("SET NAMES utf8");
 
         $this->options = ['base_uri' => 'https://petrovich.ru/'];
@@ -295,6 +301,7 @@ class Products
         if (!$result) {
             $message  = 'Неверный запрос: ' . $this->mysql->error . "\n";
             $message .= 'Запрос целиком: ' . $sql;
+            file_put_contents(PRODUCTS_LOG_FILE, $message . PHP_EOL, FILE_APPEND);
             die($message);
         }
         while ($row = $result->fetch_assoc()) {
@@ -315,6 +322,7 @@ class Products
         if (!$result) {
             $message  = 'Неверный запрос: ' . $this->mysql->error . "\n";
             $message .= 'Запрос целиком: ' . $sql;
+            file_put_contents(PRODUCTS_LOG_FILE, $message . PHP_EOL, FILE_APPEND);
             die($message);
         }
         while ($row = $result->fetch_assoc()) {
